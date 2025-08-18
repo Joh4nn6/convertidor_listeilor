@@ -3,69 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conversor Universal Premium</title>
-    <meta name="description" content="Conversor Markdown/HTML a PDF con calidad profesional, TOC automático y más.">
+    <title>Conversor Universal</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="app.js" defer></script>
-</head>
-<body>
-    <div id="loader" class="loader-overlay"><div class="spinner"></div></div>
-
-    <main class="container">
-        <header class="main-header">
-            <h1>Conversor Universal <span class="badge">Premium</span></h1>
-            <div class="actions-bar">
-                <button class="btn primary" id="btn-pdf">
-                    <span class="btn-text">Exportar a PDF</span>
-                    <div class="spinner hidden"></div>
-                </button>
-                <button class="btn" id="btn-docx"><span class="btn-text">a DOCX</span><div class="spinner hidden"></div></button>
-                <button class="btn" id="btn-png"><span class="btn-text">a PNG</span><div class="spinner hidden"></div></button>
-                <button class="btn" id="btn-txt"><span class="btn-text">a TXT</span><div class="spinner hidden"></div></button>
-                <button class="btn" id="btn-md"><span class="btn-text">a MD</span><div class="spinner hidden"></div></button>
-                <button class="btn secondary" id="btn-clear"><span class="btn-text">Limpiar</span></button>
-            </div>
-        </header>
-
-        <div class="config-bar">
-            <div class="config-group">
-                <label for="margin-input">Márgenes (mm):</label>
-                <input type="number" id="margin-input" value="20" min="0" max="50" title="Márgenes del PDF en milímetros">
-            </div>
-            <div class="config-group">
-                <label for="toc-toggle">Tabla de Contenidos:</label>
-                <input type="checkbox" id="toc-toggle" class="toggle-switch" checked>
-            </div>
-            <div class="config-group">
-                <label for="header-text">Encabezado:</label>
-                <input type="text" id="header-text" placeholder="Título del documento...">
-            </div>
-             <div class="config-group">
-                <label for="footer-text">Pie de Página:</label>
-                <input type="text" id="footer-text" placeholder="Pág. {page}/{pages}">
-            </div>
-        </div>
-
-        <div class="editor-grid">
-            <section class="panel editor-panel">
-                <div class="panel-header">
-                    <h2>Editor (Markdown / HTML)</h2>
-                    <label for="file-input" class="btn secondary file-label">Cargar Archivo</label>
-                    <input type="file" id="file-input" accept=".md,.markdown,.txt,.html,.htm" hidden>
-                </div>
-                <textarea id="editor" placeholder="Pega aquí tu contenido..."></textarea>
-            </section>
-
-            <section class="panel preview-panel">
-                <div class="panel-header"><h2>Vista Previa</h2></div>
-                <div id="preview-wrapper"><div id="preview" class="paper"></div></div>
-            </section>
-        </div>
-    </main>
-
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="main-header">
+            <h1>⚡ Conversor Universal</h1>
+            <p>Convierte Markdown y HTML a múltiples formatos — con estilo galáctico.</p>
+        </header>
+
+        <div class="converter-grid">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Tu Contenido (MD/HTML)</h2>
+                </div>
+                <textarea id="editor" placeholder="Pega tu Markdown o HTML aquí..."></textarea>
+                <div class="panel-footer">
+                    <label for="file-input" class="file-label">Seleccionar archivo</label>
+                    <input type="file" id="file-input" accept=".md,.markdown,.txt,.html">
+                    <span id="file-name">Ningún archivo seleccionado</span>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Vista Previa</h2>
+                </div>
+                <div id="preview" class="preview-content">
+                    </div>
+            </div>
+        </div>
+
+        <footer class="actions-footer">
+            <button class="btn" id="btn-pdf"><span class="btn-text">Exportar a PDF</span><div class="spinner hidden"></div></button>
+            <button class="btn" id="btn-docx"><span class="btn-text">Exportar a DOCX</span><div class="spinner hidden"></div></button>
+            <button class="btn" id="btn-png"><span class="btn-text">Exportar a PNG</span><div class="spinner hidden"></div></button>
+            <button class="btn" id="btn-txt"><span class="btn-text">Exportar a TXT</span></button>
+            <button class="btn" id="btn-md"><span class="btn-text">Exportar a MD</span></button>
+            <button class="btn-clear" id="btn-clear">Limpiar</button>
+        </footer>
+    </div>
+
+    <script>
+        const App = {
+            // Elementos del DOM que usaremos
+            elements: {
+                editor: null,
+                preview: null,
+                fileInput: null,
+                fileNameSpan: null,
+                buttons: {}
+            },
+
+            // Timer para la función debounce
+            debounceTimer: null,
+
+            // Método principal que inicializa todo
+            init() {
+                // Asignamos los elementos del DOM a nuestro objeto
+                this.elements.editor = document.getElementById('editor');
+                this.elements.preview = document.getElementById('preview');
+                this.elements.fileInput = document.getElementById('file-input');
+                this.elements.fileNameSpan = document.getElementById('file-name');
+                this.elements.buttons = {
+                    pdf: document.getElementById('btn-pdf'),
+                    docx: document.getElementById('btn-docx'),
+                    png: document.getElementById('btn-png'),
+                    txt: document.getElementById('btn-txt'),
+                    md: document.getElementById('btn-md'),
+                    clear: document.getElementById('btn-clear'),
+                };
+
+                // Asignamos los eventos a las funciones correspondientes
+                this.addEventListeners();
+            },
+
+            // Centralizamos todos los event listeners
+            addEventListeners() {
+                this.elements.editor.addEventListener('input', () => {
+                    clearTimeout(this.debounceTimer);
+                    this.debounceTimer = setTimeout(() => this.renderPreview(), 300);
+                });
+
+                this.elements.fileInput.addEventListener('change', (event) => this.handleFileLoad(event));
+
+                for (const key in this.elements.buttons) {
+                    this.elements.buttons[key].addEventListener('click', (event) => this.handleButtonClick(event, key));
+                }
+            },
+            
+            // --- FUNCIONES CORE ---
+
+            stripFrontMatter(text) {
+                return text.replace(/^---\s*[\s\S]*?---\s*/, '').trim();
+            },
+
+            renderPreview() {
+                const cleanText = this.stripFrontMatter(this.elements.editor.value);
+                this.elements.preview.innerHTML = marked.parse(cleanText);
+            },
+
+            handleFileLoad(event) {
+                const file = event.target.files[0];
+                if (!file) {
+                    this.elements.fileNameSpan.textContent = 'Ningún archivo seleccionado';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.elements.editor.value = e.target.result;
+                    this.renderPreview(); // Aseguramos que la preview se renderice DESPUÉS de cargar el contenido
+                    this.elements.editor.focus();
+                };
+                reader.readAsText(file);
+                this.elements.fileNameSpan.textContent = file.name;
+            },
+
+            getCleanTextForExport() {
+                return this.stripFrontMatter(this.elements.editor.value);
+            },
+
+            getFileName() {
+                return `documento-${new Date().toISOString().slice(0, 10)}`;
+            },
+
+            setButtonBusy(btn, isBusy) {
+                const textEl = btn.querySelector('.btn-text');
+                const spinnerEl = btn.querySelector('.spinner');
+                
+                if (isBusy) {
+                    btn.disabled = true;
+                    if (textEl) textEl.textContent = 'Generando...';
+                    if (spinnerEl) spinnerEl.classList.remove('hidden');
+                } else {
+                    btn.disabled = false;
+                    const originalText = `Exportar a ${btn.id.replace('btn-', '').toUpperCase()}`;
+                    if (textEl) textEl.textContent = originalText;
+                    if (spinnerEl) spinnerEl.classList.add('hidden');
+                }
+            },
+
+            // Manejador central para los clics de botones
+            async handleButtonClick(event, type) {
+                const button = this.elements.buttons[type];
+                
+                if (type === 'clear') {
+                    this.elements.editor.value = '';
+                    this.elements.preview.innerHTML = '';
+                    this.elements.fileInput.value = '';
+                    this.elements.fileNameSpan.textContent = 'Ningún archivo seleccionado';
+                    return;
+                }
+                
+                if (type === 'txt' || type === 'md') {
+                     const blob = new Blob([this.getCleanTextForExport()], { type: 'text/plain;charset=utf-8' });
+                     saveAs(blob, `${this.getFileName()}.${type}`);
+                     return;
+                }
+
+                this.setButtonBusy(button, true);
+                try {
+                    switch (type) {
+                        case 'pdf':
+                            const pdfOptions = {
+                                margin: [20, 15, 20, 15],
+                                filename: `${this.getFileName()}.pdf`,
+                                image: { type: 'jpeg', quality: 0.98 },
+                                html2canvas: { scale: 2, useCORS: true },
+                                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                            };
+                            await html2pdf().from(this.elements.preview).set(pdfOptions).save();
+                            break;
+                        case 'docx':
+                            const cleanText = this.getCleanTextForExport();
+                            const paragraphs = cleanText.split('\n').map(line => new docx.Paragraph({ children: [new docx.TextRun(line)] }));
+                            const doc = new docx.Document({ sections: [{ children: paragraphs }] });
+                            const blob = await docx.Packer.toBlob(doc);
+                            saveAs(blob, `${this.getFileName()}.docx`);
+                            break;
+                        case 'png':
+                            const pngOptions = { scale: 2, backgroundColor: '#ffffff' };
+                            const canvas = await html2canvas(this.elements.preview, pngOptions);
+                            canvas.toBlob(blob => {
+                                saveAs(blob, `${this.getFileName()}.png`);
+                            });
+                            break;
+                    }
+                } catch (error) {
+                    console.error(`Error al exportar a ${type}:`, error);
+                    alert(`Ocurrió un error al exportar a ${type.toUpperCase()}`);
+                } finally {
+                    this.setButtonBusy(button, false);
+                }
+            }
+        };
+
+        // Iniciamos la aplicación cuando el DOM esté completamente cargado
+        document.addEventListener('DOMContentLoaded', () => App.init());
+    </script>
 </body>
 </html>
