@@ -1,211 +1,305 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conversor Universal</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <title>Claude Converter Pro</title>
+    
+    <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script defer src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: rgba(21, 27, 45, 0.7);
+            --bg-panel: rgba(26, 34, 52, 0.75);
+            --border-color: #2a3441;
+            --text-primary: #e8ecf4;
+            --text-secondary: #94a3b8;
+            --accent-primary: #667eea;
+            --accent-secondary: #764ba2;
+            --gradient-primary: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.3);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --border-radius: 12px;
+        }
+
+        :root.light {
+            --bg-primary: #f0f2f5;
+            --bg-secondary: rgba(255, 255, 255, 0.7);
+            --bg-panel: rgba(255, 255, 255, 0.8);
+            --border-color: #d1d5db;
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            background-image: url('galaxy-background.webp');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-primary);
+            padding: 1.5rem;
+            min-height: 100vh;
+            transition: var(--transition);
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            animation: slideInDown 0.5s ease-out;
+        }
+
+        .title-group { display: flex; align-items: center; gap: 1rem; }
+        .title-group h1 { font-size: 1.75rem; font-weight: 700; }
+        .version-badge { background: var(--gradient-primary); color: white; font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 6px; }
+
+        .header-actions { display: flex; gap: 0.5rem; }
+        .icon-btn { background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-secondary); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: var(--transition); backdrop-filter: blur(10px); }
+        .icon-btn:hover { color: var(--text-primary); border-color: var(--accent-primary); transform: translateY(-2px); box-shadow: var(--shadow-xl); }
+
+        .converter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; min-height: 70vh; }
+
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .editor-container { display: flex; flex-direction: column; flex-grow: 1; }
+        .toolbar { display: flex; padding: 0.5rem; gap: 0.5rem; border-bottom: 1px solid var(--border-color); }
+        .tool-btn { background: transparent; border: 1px solid transparent; color: var(--text-secondary); padding: 0.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .tool-btn:hover { background: var(--bg-secondary); color: var(--text-primary); }
+
+        #editor { flex-grow: 1; background: transparent; border: none; color: var(--text-primary); padding: 1rem; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 14px; line-height: 1.7; resize: none; }
+        #editor:focus { outline: none; }
+
+        .editor-footer { padding: 0.5rem 1rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--text-secondary); }
+
+        .export-buttons { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .btn { width: 100%; padding: 0.75rem; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: var(--transition); }
+        .btn-primary { background: var(--gradient-primary); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+
+        #preview-wrapper { flex-grow: 1; padding: 1.5rem; overflow-y: auto; }
+        .paper { background: #fff; color: #111; border-radius: 4px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); padding: 2rem; min-height: 100%; transition: var(--transition); }
+        :root.light .paper { background: #f9fafb; }
+        /* A4 Aspect Ratio Simulation */
+        .paper { width: 100%; aspect-ratio: 210 / 297; min-height: auto; padding: 1.5rem 2rem; }
+        
+        /* Estilos de Previsualización */
+        .paper h1, .paper h2 { border-bottom: 1px solid #e5e7eb; padding-bottom: 0.3em; margin: 1.5em 0 1em; }
+        .paper p { margin-bottom: 1em; line-height: 1.6; }
+        .paper table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+        .paper th, .paper td { border: 1px solid #d1d5db; padding: 0.5em; }
+
+        /* Dropdown para Plantillas */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { display: none; position: absolute; background-color: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; min-width: 200px; box-shadow: var(--shadow-xl); z-index: 1; right: 0; backdrop-filter: blur(20px); }
+        .dropdown-content a { color: var(--text-secondary); padding: 12px 16px; text-decoration: none; display: block; }
+        .dropdown-content a:hover { background-color: var(--bg-secondary); color: var(--text-primary); }
+        .show { display: block; }
+
+        @keyframes slideInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 900px) { .converter-grid { grid-template-columns: 1fr; } }
+    </style>
 </head>
 <body>
     <div class="container">
         <header class="main-header">
-            <h1>⚡ Conversor Universal</h1>
-            <p>Convierte Markdown y HTML a múltiples formatos — con estilo galáctico.</p>
+            <div class="title-group">
+                <h1>Claude Converter</h1>
+                <span class="version-badge">Pro</span>
+            </div>
+            <div class="header-actions">
+                 <div class="dropdown">
+                    <button class="icon-btn" id="templates-btn" title="Plantillas">📄</button>
+                    <div id="templates-dropdown" class="dropdown-content">
+                        <a href="#" data-template="academic">🎓 Documento Académico</a>
+                        <a href="#" data-template="cv">📋 Currículum Profesional</a>
+                    </div>
+                </div>
+                <button class="icon-btn" id="settings-btn" title="Configuración">⚙️</button>
+                <button class="icon-btn" id="theme-toggle-btn" title="Cambiar Tema">🌗</button>
+            </div>
         </header>
 
         <div class="converter-grid">
             <div class="panel">
-                <div class="panel-header">
-                    <h2>Tu Contenido (MD/HTML)</h2>
+                <div class="editor-container">
+                    <div class="toolbar">
+                        <button class="tool-btn" data-format="bold">B</button>
+                        <button class="tool-btn" data-format="italic">I</button>
+                        <button class="tool-btn" data-format="code">`</button>
+                    </div>
+                    <textarea id="editor" placeholder="Pega tu contenido aquí..."></textarea>
+                    <div class="editor-footer">
+                        <div id="stats">
+                            <span>Chars: 0</span> | <span>Words: 0</span> | <span>Read: ~0 min</span>
+                        </div>
+                    </div>
                 </div>
-                <textarea id="editor" placeholder="Pega tu Markdown o HTML aquí..."></textarea>
-                <div class="panel-footer">
-                    <label for="file-input" class="file-label">Seleccionar archivo</label>
-                    <input type="file" id="file-input" accept=".md,.markdown,.txt,.html">
-                    <span id="file-name">Ningún archivo seleccionado</span>
+                 <div class="export-buttons">
+                    <button class="btn btn-primary" id="btn-pdf">Exportar a PDF Premium</button>
                 </div>
             </div>
 
             <div class="panel">
-                <div class="panel-header">
-                    <h2>Vista Previa</h2>
-                </div>
-                <div id="preview" class="preview-content">
+                <div id="preview-wrapper">
+                    <div id="preview" class="paper">
+                        <h2>Bienvenido a Claude Converter Pro</h2>
+                        <p>Pega tu Markdown o HTML en el editor de la izquierda para empezar. También puedes cargar una de nuestras plantillas usando el botón 📄.</p>
                     </div>
+                </div>
             </div>
         </div>
-
-        <footer class="actions-footer">
-            <button class="btn" id="btn-pdf"><span class="btn-text">Exportar a PDF</span><div class="spinner hidden"></div></button>
-            <button class="btn" id="btn-docx"><span class="btn-text">Exportar a DOCX</span><div class="spinner hidden"></div></button>
-            <button class="btn" id="btn-png"><span class="btn-text">Exportar a PNG</span><div class="spinner hidden"></div></button>
-            <button class="btn" id="btn-txt"><span class="btn-text">Exportar a TXT</span></button>
-            <button class="btn" id="btn-md"><span class="btn-text">Exportar a MD</span></button>
-            <button class="btn-clear" id="btn-clear">Limpiar</button>
-        </footer>
     </div>
 
     <script>
+    document.addEventListener('DOMContentLoaded', () => {
         const App = {
-            // Elementos del DOM que usaremos
             elements: {
-                editor: null,
-                preview: null,
-                fileInput: null,
-                fileNameSpan: null,
-                buttons: {}
+                editor: document.getElementById('editor'),
+                preview: document.getElementById('preview'),
+                themeToggle: document.getElementById('theme-toggle-btn'),
+                templatesBtn: document.getElementById('templates-btn'),
+                templatesDropdown: document.getElementById('templates-dropdown'),
+                stats: document.getElementById('stats'),
+                pdfBtn: document.getElementById('btn-pdf'),
+                toolbar: document.querySelector('.toolbar'),
             },
-
-            // Timer para la función debounce
             debounceTimer: null,
 
-            // Método principal que inicializa todo
-            init() {
-                // Asignamos los elementos del DOM a nuestro objeto
-                this.elements.editor = document.getElementById('editor');
-                this.elements.preview = document.getElementById('preview');
-                this.elements.fileInput = document.getElementById('file-input');
-                this.elements.fileNameSpan = document.getElementById('file-name');
-                this.elements.buttons = {
-                    pdf: document.getElementById('btn-pdf'),
-                    docx: document.getElementById('btn-docx'),
-                    png: document.getElementById('btn-png'),
-                    txt: document.getElementById('btn-txt'),
-                    md: document.getElementById('btn-md'),
-                    clear: document.getElementById('btn-clear'),
-                };
-
-                // Asignamos los eventos a las funciones correspondientes
-                this.addEventListeners();
+            templates: {
+                academic: `# Título del Documento\n\n**Autor:** Tu Nombre\n**Fecha:** ${new Date().toLocaleDateString()}\n**Institución:** Universidad/Institución\n\n## Resumen\n\n## Introducción\n\n## Conclusiones`,
+                cv: `# Tu Nombre\n\n**Email:** tu@email.com | **Teléfono:** +123456789\n\n---\n\n### Experiencia Profesional\n\n**Cargo Actual** | Empresa Actual | 2022 - Presente\n- Logro 1\n- Logro 2\n\n### Educación\n\n**Tu Título** | Tu Universidad | 2018 - 2022`
             },
 
-            // Centralizamos todos los event listeners
+            init() {
+                this.addEventListeners();
+                this.updateStats();
+            },
+
             addEventListeners() {
                 this.elements.editor.addEventListener('input', () => {
                     clearTimeout(this.debounceTimer);
-                    this.debounceTimer = setTimeout(() => this.renderPreview(), 300);
+                    this.debounceTimer = setTimeout(() => {
+                        this.renderPreview();
+                        this.updateStats();
+                    }, 300);
                 });
 
-                this.elements.fileInput.addEventListener('change', (event) => this.handleFileLoad(event));
+                this.elements.themeToggle.addEventListener('click', () => {
+                    document.documentElement.classList.toggle('light');
+                });
 
-                for (const key in this.elements.buttons) {
-                    this.elements.buttons[key].addEventListener('click', (event) => this.handleButtonClick(event, key));
-                }
-            },
-            
-            // --- FUNCIONES CORE ---
+                this.elements.templatesBtn.addEventListener('click', () => {
+                    this.elements.templatesDropdown.classList.toggle('show');
+                });
 
-            stripFrontMatter(text) {
-                return text.replace(/^---\s*[\s\S]*?---\s*/, '').trim();
+                this.elements.templatesDropdown.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'A') {
+                        const templateName = e.target.dataset.template;
+                        if (this.templates[templateName]) {
+                            this.elements.editor.value = this.templates[templateName];
+                            this.renderPreview();
+                            this.updateStats();
+                        }
+                        this.elements.templatesDropdown.classList.remove('show');
+                    }
+                });
+
+                this.elements.toolbar.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('tool-btn')) {
+                        this.formatText(e.target.dataset.format);
+                    }
+                });
+
+                this.elements.pdfBtn.addEventListener('click', this.exportPDF);
+                
+                window.addEventListener('click', (e) => {
+                    if (!e.target.matches('#templates-btn')) {
+                        if (this.elements.templatesDropdown.classList.contains('show')) {
+                            this.elements.templatesDropdown.classList.remove('show');
+                        }
+                    }
+                });
             },
+
+            stripFrontMatter(text) { return text.replace(/^---\s*[\s\S]*?---\s*/, '').trim(); },
 
             renderPreview() {
-                const cleanText = this.stripFrontMatter(this.elements.editor.value);
-                this.elements.preview.innerHTML = marked.parse(cleanText);
+                const cleanText = this.stripFrontMatter(App.elements.editor.value);
+                App.elements.preview.innerHTML = marked.parse(cleanText);
             },
 
-            handleFileLoad(event) {
-                const file = event.target.files[0];
-                if (!file) {
-                    this.elements.fileNameSpan.textContent = 'Ningún archivo seleccionado';
-                    return;
+            updateStats() {
+                const text = this.elements.editor.value;
+                const charCount = text.length;
+                const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+                const readTime = Math.ceil(wordCount / 200);
+                this.elements.stats.innerHTML = `<span>Chars: ${charCount}</span> | <span>Words: ${wordCount}</span> | <span>Read: ~${readTime} min</span>`;
+            },
+
+            formatText(format) {
+                const start = this.elements.editor.selectionStart;
+                const end = this.elements.editor.selectionEnd;
+                const selectedText = this.elements.editor.value.substring(start, end);
+                let newText;
+
+                switch (format) {
+                    case 'bold': newText = `**${selectedText}**`; break;
+                    case 'italic': newText = `*${selectedText}*`; break;
+                    case 'code': newText = `\`${selectedText}\``; break;
                 }
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    this.elements.editor.value = e.target.result;
-                    this.renderPreview(); // Aseguramos que la preview se renderice DESPUÉS de cargar el contenido
-                    this.elements.editor.focus();
+
+                this.elements.editor.setRangeText(newText, start, end, 'select');
+                this.elements.editor.focus();
+                this.renderPreview();
+                this.updateStats();
+á            },
+            
+            exportPDF() {
+                const preview = document.getElementById('preview');
+                const options = {
+                    margin: [15, 15, 15, 15],
+                    filename: `documento-pro.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
                 };
-                reader.readAsText(file);
-                this.elements.fileNameSpan.textContent = file.name;
-            },
-
-            getCleanTextForExport() {
-                return this.stripFrontMatter(this.elements.editor.value);
-            },
-
-            getFileName() {
-                return `documento-${new Date().toISOString().slice(0, 10)}`;
-            },
-
-            setButtonBusy(btn, isBusy) {
-                const textEl = btn.querySelector('.btn-text');
-                const spinnerEl = btn.querySelector('.spinner');
-                
-                if (isBusy) {
-                    btn.disabled = true;
-                    if (textEl) textEl.textContent = 'Generando...';
-                    if (spinnerEl) spinnerEl.classList.remove('hidden');
-                } else {
-                    btn.disabled = false;
-                    const originalText = `Exportar a ${btn.id.replace('btn-', '').toUpperCase()}`;
-                    if (textEl) textEl.textContent = originalText;
-                    if (spinnerEl) spinnerEl.classList.add('hidden');
-                }
-            },
-
-            // Manejador central para los clics de botones
-            async handleButtonClick(event, type) {
-                const button = this.elements.buttons[type];
-                
-                if (type === 'clear') {
-                    this.elements.editor.value = '';
-                    this.elements.preview.innerHTML = '';
-                    this.elements.fileInput.value = '';
-                    this.elements.fileNameSpan.textContent = 'Ningún archivo seleccionado';
-                    return;
-                }
-                
-                if (type === 'txt' || type === 'md') {
-                     const blob = new Blob([this.getCleanTextForExport()], { type: 'text/plain;charset=utf-8' });
-                     saveAs(blob, `${this.getFileName()}.${type}`);
-                     return;
-                }
-
-                this.setButtonBusy(button, true);
-                try {
-                    switch (type) {
-                        case 'pdf':
-                            const pdfOptions = {
-                                margin: [20, 15, 20, 15],
-                                filename: `${this.getFileName()}.pdf`,
-                                image: { type: 'jpeg', quality: 0.98 },
-                                html2canvas: { scale: 2, useCORS: true },
-                                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-                            };
-                            await html2pdf().from(this.elements.preview).set(pdfOptions).save();
-                            break;
-                        case 'docx':
-                            const cleanText = this.getCleanTextForExport();
-                            const paragraphs = cleanText.split('\n').map(line => new docx.Paragraph({ children: [new docx.TextRun(line)] }));
-                            const doc = new docx.Document({ sections: [{ children: paragraphs }] });
-                            const blob = await docx.Packer.toBlob(doc);
-                            saveAs(blob, `${this.getFileName()}.docx`);
-                            break;
-                        case 'png':
-                            const pngOptions = { scale: 2, backgroundColor: '#ffffff' };
-                            const canvas = await html2canvas(this.elements.preview, pngOptions);
-                            canvas.toBlob(blob => {
-                                saveAs(blob, `${this.getFileName()}.png`);
-                            });
-                            break;
-                    }
-                } catch (error) {
-                    console.error(`Error al exportar a ${type}:`, error);
-                    alert(`Ocurrió un error al exportar a ${type.toUpperCase()}`);
-                } finally {
-                    this.setButtonBusy(button, false);
-                }
+                html2pdf().from(preview).set(options).save();
             }
         };
 
-        // Iniciamos la aplicación cuando el DOM esté completamente cargado
-        document.addEventListener('DOMContentLoaded', () => App.init());
+        App.init();
+    });
     </script>
 </body>
 </html>
