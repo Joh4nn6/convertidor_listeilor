@@ -3,29 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conversor Universal</title>
-    <meta name="description" content="Convierte Markdown y HTML a múltiples formatos con una interfaz limpia y offline.">
+    <title>Conversor Universal Premium</title>
+    <meta name="description" content="Conversor Markdown/HTML a PDF con calidad profesional, TOC automático y más.">
     <link rel="stylesheet" href="styles.css">
-
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="app.js" defer></script>
 </head>
 <body>
+    <div id="loader" class="loader-overlay"><div class="spinner"></div></div>
 
     <main class="container">
         <header class="main-header">
-            <h1>Conversor Universal</h1>
+            <h1>Conversor Universal <span class="badge">Premium</span></h1>
             <div class="actions-bar">
-                <button class="btn" id="btn-pdf">Exportar a PDF</button>
-                <button class="btn" id="btn-docx">Exportar a DOCX</button>
-                <button class="btn" id="btn-png">Exportar a PNG</button>
-                <button class="btn" id="btn-txt">Exportar a TXT</button>
-                <button class="btn" id="btn-md">Exportar a MD</button>
-                <button class="btn secondary" id="btn-clear">Limpiar</button>
+                <button class="btn primary" id="btn-pdf">
+                    <span class="btn-text">Exportar a PDF</span>
+                    <div class="spinner hidden"></div>
+                </button>
+                <button class="btn" id="btn-docx"><span class="btn-text">a DOCX</span><div class="spinner hidden"></div></button>
+                <button class="btn" id="btn-png"><span class="btn-text">a PNG</span><div class="spinner hidden"></div></button>
+                <button class="btn" id="btn-txt"><span class="btn-text">a TXT</span><div class="spinner hidden"></div></button>
+                <button class="btn" id="btn-md"><span class="btn-text">a MD</span><div class="spinner hidden"></div></button>
+                <button class="btn secondary" id="btn-clear"><span class="btn-text">Limpiar</span></button>
             </div>
         </header>
+
+        <div class="config-bar">
+            <div class="config-group">
+                <label for="margin-input">Márgenes (mm):</label>
+                <input type="number" id="margin-input" value="20" min="0" max="50" title="Márgenes del PDF en milímetros">
+            </div>
+            <div class="config-group">
+                <label for="toc-toggle">Tabla de Contenidos:</label>
+                <input type="checkbox" id="toc-toggle" class="toggle-switch" checked>
+            </div>
+            <div class="config-group">
+                <label for="header-text">Encabezado:</label>
+                <input type="text" id="header-text" placeholder="Título del documento...">
+            </div>
+             <div class="config-group">
+                <label for="footer-text">Pie de Página:</label>
+                <input type="text" id="footer-text" placeholder="Pág. {page}/{pages}">
+            </div>
+        </div>
 
         <div class="editor-grid">
             <section class="panel editor-panel">
@@ -38,149 +57,15 @@
             </section>
 
             <section class="panel preview-panel">
-                <div class="panel-header">
-                    <h2>Vista Previa</h2>
-                </div>
-                <div id="preview-wrapper">
-                    <div id="preview" class="paper">
-                        </div>
-                </div>
+                <div class="panel-header"><h2>Vista Previa</h2></div>
+                <div id="preview-wrapper"><div id="preview" class="paper"></div></div>
             </section>
         </div>
     </main>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- SELECTORES DEL DOM ---
-            const editor = document.getElementById('editor');
-            const preview = document.getElementById('preview');
-            const fileInput = document.getElementById('file-input');
-            
-            // --- BOTONES ---
-            const btnPdf = document.getElementById('btn-pdf');
-            const btnDocx = document.getElementById('btn-docx');
-            const btnPng = document.getElementById('btn-png');
-            const btnTxt = document.getElementById('btn-txt');
-            const btnMd = document.getElementById('btn-md');
-            const btnClear = document.getElementById('btn-clear');
-
-            // --- FUNCIONES AUXILIARES ---
-            const stripFrontMatter = (text) => {
-                const yamlRegex = /^---\s*[\s\S]*?---\s*/;
-                return text.replace(yamlRegex, '').trim();
-            };
-
-            const sanitizeHTML = (html) => {
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = html;
-                
-                // Remover scripts e iframes
-                tempDiv.querySelectorAll('script, iframe').forEach(el => el.remove());
-                
-                // Remover event handlers (on*)
-                tempDiv.querySelectorAll('*').forEach(el => {
-                    for (const attr of el.attributes) {
-                        if (attr.name.startsWith('on')) {
-                            el.removeAttribute(attr.name);
-                        }
-                    }
-                });
-                return tempDiv.innerHTML;
-            };
-
-            // --- RENDERIZADO PRINCIPAL ---
-            const renderPreview = () => {
-                const rawText = editor.value;
-                const cleanText = stripFrontMatter(rawText);
-                const dirtyHtml = marked.parse(cleanText);
-                const safeHtml = sanitizeHTML(dirtyHtml);
-                preview.innerHTML = safeHtml;
-            };
-
-            // --- MANEJO DE ARCHIVOS ---
-            const handleFileLoad = (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    editor.value = e.target.result;
-                    renderPreview();
-                };
-                reader.readAsText(file);
-            };
-
-            // --- LÓGICA DE EXPORTACIÓN ---
-            const getCleanText = () => stripFrontMatter(editor.value);
-            const getFileName = () => `documento-${new Date().toISOString().slice(0, 10)}`;
-
-            const exportPDF = () => {
-                preview.classList.add('print');
-                const options = {
-                    margin: [0.5, 0.5, 0.5, 0.5],
-                    filename: `${getFileName()}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-                    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-                };
-                html2pdf().from(preview).set(options).save().then(() => {
-                    preview.classList.remove('print');
-                });
-            };
-
-            const exportDOCX = () => {
-                const cleanText = getCleanText();
-                const paragraphs = cleanText.split('\n').map(line => new docx.Paragraph({ children: [new docx.TextRun(line)] }));
-                const doc = new docx.Document({ sections: [{ children: paragraphs }] });
-                docx.Packer.toBlob(doc).then(blob => {
-                    saveAs(blob, `${getFileName()}.docx`);
-                });
-            };
-
-            const exportPNG = () => {
-                preview.classList.add('print');
-                const options = {
-                    scale: 2,
-                    backgroundColor: '#ffffff',
-                    useCORS: true
-                };
-                html2canvas(preview, options).then(canvas => {
-                    canvas.toBlob(blob => {
-                        saveAs(blob, `${getFileName()}.png`);
-                        preview.classList.remove('print');
-                    });
-                });
-            };
-
-            const exportTXT = () => {
-                const blob = new Blob([getCleanText()], { type: 'text/plain;charset=utf-8' });
-                saveAs(blob, `${getFileName()}.txt`);
-            };
-
-            const exportMD = () => {
-                const blob = new Blob([getCleanText()], { type: 'text/plain;charset=utf-8' });
-                saveAs(blob, `${getFileName()}.md`);
-            };
-            
-            // --- EVENT LISTENERS ---
-            editor.addEventListener('input', renderPreview);
-            fileInput.addEventListener('change', handleFileLoad);
-            
-            btnPdf.addEventListener('click', exportPDF);
-            btnDocx.addEventListener('click', exportDOCX);
-            btnPng.addEventListener('click', exportPNG);
-            btnTxt.addEventListener('click', exportTXT);
-            btnMd.addEventListener('click', exportMD);
-            
-            btnClear.addEventListener('click', () => {
-                editor.value = '';
-                renderPreview();
-            });
-
-            // --- INICIALIZACIÓN ---
-            editor.value = `# ¡Bienvenido al Conversor Universal!\n\nEscribe tu **Markdown** o \`<p style="color:#e50914">HTML</p>\` aquí. La vista previa se actualizará en vivo.`;
-            renderPreview();
-        });
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </body>
 </html>
